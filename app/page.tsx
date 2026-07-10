@@ -233,18 +233,25 @@ export default function Home() {
   useEffect(() => {
     if (phase !== "done" || donePages.length === 0) return;
     if (readyPdf?.key === pdfKey) return;
+    // 重試/匯出進行中不預產,整本渲染很吃 CPU,會把翻譯 API 一起拖慢
+    if (exporting !== null) return;
+    if (pages.some((p) => p.status === "translating")) return;
 
     let cancelled = false;
-    fetchPdfBlob(fileName || "pdfluv2", donePages, "translated", settings.targetLang, cover)
-      .then((blob) => {
-        if (!cancelled) setReadyPdf({ key: pdfKey, blob });
-      })
-      .catch(() => {});
+    // 防抖:等頁面狀態安靜 5 秒才渲染,避免逐頁重試時每頁都重渲整本
+    const timer = setTimeout(() => {
+      fetchPdfBlob(fileName || "pdfluv2", donePages, "translated", settings.targetLang, cover)
+        .then((blob) => {
+          if (!cancelled) setReadyPdf({ key: pdfKey, blob });
+        })
+        .catch(() => {});
+    }, 5000);
     return () => {
       cancelled = true;
+      clearTimeout(timer);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [phase, pages, readyPdf, fileName, settings.targetLang, cover]);
+  }, [phase, pages, readyPdf, fileName, settings.targetLang, cover, exporting]);
 
   return (
     <main className="mx-auto max-w-5xl px-4 py-10">

@@ -46,6 +46,12 @@ export async function translateWithBing(text: string, targetLang: TargetLang): P
     res = await requestTranslation(text, targetLang, await getToken(true));
   }
 
+  // 429/5xx 為暫時性,退避一次再試
+  if (res.status === 429 || res.status >= 500) {
+    await new Promise((resolve) => setTimeout(resolve, 800));
+    res = await requestTranslation(text, targetLang, await getToken());
+  }
+
   if (!res.ok) {
     throw new Error(`Bing 翻譯服務回應 ${res.status}，請稍後再試`);
   }

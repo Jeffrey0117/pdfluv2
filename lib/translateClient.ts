@@ -1,7 +1,16 @@
 import { splitTextIntoChunks } from "@/lib/chunk";
 import type { TranslateResponseBody, TranslateSettings } from "@/lib/types";
 
-async function translateChunk(chunk: string, settings: TranslateSettings): Promise<string> {
+const MAX_ATTEMPTS = 3;
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function requestTranslate(
+  chunk: string,
+  settings: TranslateSettings
+): Promise<{ status: number; data: TranslateResponseBody | null }> {
   const res = await fetch("/api/translate", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -14,12 +23,23 @@ async function translateChunk(chunk: string, settings: TranslateSettings): Promi
       baseUrl: settings.provider === "openai" ? settings.baseUrl : undefined,
     }),
   });
-
   const data = (await res.json().catch(() => null)) as TranslateResponseBody | null;
-  if (!data?.success || !data.data) {
-    throw new Error(data?.error ?? `翻譯請求失敗（HTTP ${res.status}）`);
+  return { status: res.status, data };
+}
+
+async function translateChunk(chunk: string, settings: TranslateSettings): Promise<string> {
+  let lastError = "";
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    if (attempt > 1) await sleep(1500 * 2 ** (attempt - 2));
+
+    const { status, data } = await requestTranslate(chunk, settings);
+    if (data?.success && data.data) return data.data.translated;
+
+    lastError = data?.error ?? `翻譯請求失敗（HTTP ${status}）`;
+    // 參數錯誤重試也沒用;429/5xx 是暫時性的,退避後再試
+    if (status === 400) break;
   }
-  return data.data.translated;
+  throw new Error(lastError);
 }
 
 export async function translatePageText(

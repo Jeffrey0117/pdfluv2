@@ -337,7 +337,7 @@ export function TranslationPdf({
   return (
     <Document title={`${fileName} - ${modeLabel}`} producer="PDFluv2" creator="PDFluv2">
       {coverImage && (
-        <Page size="A4" style={styles.coverPage}>
+        <Page size="A4" style={styles.coverPage} wrap={false}>
           <Image src={coverImage} style={styles.coverImage} />
         </Page>
       )}
