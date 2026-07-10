@@ -107,9 +107,10 @@ const styles = StyleSheet.create({
     marginTop: 4,
     marginBottom: 10,
   },
+  // 中文不用 justify:react-pdf 只在空格處拉伸,中文夾英文時
+  // 整行的鬆量會全塞進少數空格變成大縫;方塊字左對齊右緣本就近乎切齊
   body: {
     lineHeight: 1.44,
-    textAlign: "justify",
     marginBottom: 3,
   },
   footer: {
