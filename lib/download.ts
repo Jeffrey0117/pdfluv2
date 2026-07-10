@@ -51,7 +51,7 @@ export async function fetchPdfBlob(
 }
 
 export function savePdfBlob(baseName: string, mode: PdfMode, blob: Blob): void {
-  const suffix = mode === "bilingual" ? "中英對照" : "中文翻譯";
+  const suffix = mode === "bilingual" ? "學習版" : "閱讀版";
   downloadBlob(`${baseName}-${suffix}.pdf`, blob);
 }
 

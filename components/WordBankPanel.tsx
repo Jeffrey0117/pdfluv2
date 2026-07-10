@@ -39,10 +39,10 @@ export function WordBankPanel({ value, disabled, onChange }: WordBankPanelProps)
           className="h-4 w-4 accent-rose-500"
         />
         <span className="text-sm font-medium text-neutral-800 dark:text-neutral-100">
-          難字標註 + Word Bank
+          學習版：難字標註 + Word Bank
         </span>
         <span className="text-xs text-neutral-500 dark:text-neutral-400">
-          英文難字標紅底線，每頁附單字區（音標、中譯、原書例句）
+          只套用在「學習版 PDF」— 難字標紅底線，每頁附單字區（音標、中譯、原書例句）
         </span>
       </label>
 

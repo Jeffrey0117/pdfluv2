@@ -155,13 +155,14 @@ export default function Home() {
     setExporting(mode);
     setGlobalError("");
     try {
+      // 閱讀版(純中文)不帶難字標註;學習版(中英對照)依設定套用
       const blob = await fetchPdfBlob(
         baseName,
         donePages,
         mode,
         settings.targetLang,
         cover,
-        settings.wordBank
+        mode === "bilingual" ? settings.wordBank : undefined
       );
       if (mode === "translated") setReadyPdf({ key: pdfKey, blob });
       savePdfBlob(baseName, mode, blob);
@@ -216,11 +217,10 @@ export default function Home() {
   const failedPages = pages.filter((p) => p.status === "error");
   const busy = phase === "extracting" || phase === "translating";
   const donePages = pages.filter((p) => p.status === "done" && p.translated.length > 0);
-  // 語言、封面、難字設定或任一頁內容變了,預先產生的 PDF 就失效
+  // 預先產生的是閱讀版(純中文、無難字標註);語言、封面或任一頁內容變了就失效
   const pdfKey = [
     settings.targetLang,
     `${cover?.length ?? 0}:${cover?.slice(-24) ?? ""}`,
-    JSON.stringify(settings.wordBank),
     donePages.map((p) => `${p.pageNumber}:${p.translated.length}`).join(","),
   ].join("|");
 
@@ -235,14 +235,7 @@ export default function Home() {
     if (readyPdf?.key === pdfKey) return;
 
     let cancelled = false;
-    fetchPdfBlob(
-      fileName || "pdfluv2",
-      donePages,
-      "translated",
-      settings.targetLang,
-      cover,
-      settings.wordBank
-    )
+    fetchPdfBlob(fileName || "pdfluv2", donePages, "translated", settings.targetLang, cover)
       .then((blob) => {
         if (!cancelled) setReadyPdf({ key: pdfKey, blob });
       })
@@ -251,7 +244,7 @@ export default function Home() {
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [phase, pages, readyPdf, fileName, settings.targetLang, cover, settings.wordBank]);
+  }, [phase, pages, readyPdf, fileName, settings.targetLang, cover]);
 
   return (
     <main className="mx-auto max-w-5xl px-4 py-10">
@@ -350,9 +343,9 @@ export default function Home() {
                       ? "產生中…"
                       : phase === "done"
                         ? readyPdf?.key === pdfKey
-                          ? "下載翻譯 PDF（已就緒）"
-                          : "下載翻譯 PDF"
-                        : `部分翻譯 PDF（${doneCount}/${pages.length}）`}
+                          ? "閱讀版 PDF（已就緒）"
+                          : "閱讀版 PDF"
+                        : `部分閱讀版（${doneCount}/${pages.length}）`}
                   </button>
                   <button
                     type="button"
@@ -363,8 +356,8 @@ export default function Home() {
                     {exporting === "bilingual"
                       ? "產生中…"
                       : phase === "done"
-                        ? "中英對照 PDF"
-                        : `部分對照 PDF（${doneCount}/${pages.length}）`}
+                        ? "學習版 PDF"
+                        : `部分學習版（${doneCount}/${pages.length}）`}
                   </button>
                   <button
                     type="button"
@@ -383,6 +376,12 @@ export default function Home() {
                 換一份 PDF
               </button>
             </div>
+
+            {donePages.length > 0 && (
+              <p className="w-full text-xs text-neutral-400 dark:text-neutral-500">
+                閱讀版＝純中文、無標註，躺著看；學習版＝中英對照＋難字 Word Bank，精讀用
+              </p>
+            )}
 
             <CoverPicker cover={cover} disabled={exporting !== null} onChange={setCover} />
 
