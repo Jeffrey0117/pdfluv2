@@ -162,7 +162,8 @@ export default function Home() {
         mode,
         settings.targetLang,
         cover,
-        mode === "bilingual" ? settings.wordBank : undefined
+        mode === "bilingual" ? settings.wordBank : undefined,
+        settings.fontStyle
       );
       if (mode === "translated") setReadyPdf({ key: pdfKey, blob });
       savePdfBlob(baseName, mode, blob);
@@ -233,9 +234,10 @@ export default function Home() {
     await translateAll(unfinishedPages, runId);
     if (runIdRef.current === runId) setPhase("done");
   };
-  // 預先產生的是閱讀版(純中文、無難字標註);語言、封面或任一頁內容變了就失效
+  // 預先產生的是閱讀版(純中文、無難字標註);語言、字體、封面或任一頁內容變了就失效
   const pdfKey = [
     settings.targetLang,
+    settings.fontStyle,
     `${cover?.length ?? 0}:${cover?.slice(-24) ?? ""}`,
     donePages.map((p) => `${p.pageNumber}:${p.translated.length}`).join(","),
   ].join("|");
@@ -250,7 +252,15 @@ export default function Home() {
     let cancelled = false;
     // 防抖:等頁面狀態安靜 5 秒才渲染,避免逐頁重試時每頁都重渲整本
     const timer = setTimeout(() => {
-      fetchPdfBlob(fileName || "pdfluv2", donePages, "translated", settings.targetLang, cover)
+      fetchPdfBlob(
+        fileName || "pdfluv2",
+        donePages,
+        "translated",
+        settings.targetLang,
+        cover,
+        undefined,
+        settings.fontStyle
+      )
         .then((blob) => {
           if (!cancelled) setReadyPdf({ key: pdfKey, blob });
         })
@@ -261,7 +271,7 @@ export default function Home() {
       clearTimeout(timer);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [phase, pages, readyPdf, fileName, settings.targetLang, cover, exporting]);
+  }, [phase, pages, readyPdf, fileName, settings.targetLang, cover, exporting, settings.fontStyle]);
 
   return (
     <main className="mx-auto max-w-5xl px-4 py-10">
@@ -404,9 +414,34 @@ export default function Home() {
             </div>
 
             {donePages.length > 0 && (
-              <p className="w-full text-xs text-neutral-400 dark:text-neutral-500">
-                閱讀版＝純中文、無標註，躺著看；學習版＝中英對照＋難字 Word Bank，精讀用
-              </p>
+              <div className="flex w-full flex-wrap items-center gap-x-4 gap-y-2">
+                <p className="text-xs text-neutral-400 dark:text-neutral-500">
+                  閱讀版＝純中文、無標註，躺著看；學習版＝中英對照＋難字 Word Bank，精讀用
+                </p>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs text-neutral-500 dark:text-neutral-400">字體：</span>
+                  {(
+                    [
+                      { value: "serif", label: "書籍（明體）" },
+                      { value: "sans", label: "輕鬆（黑體）" },
+                    ] as const
+                  ).map(({ value, label }) => (
+                    <button
+                      key={value}
+                      type="button"
+                      disabled={exporting !== null}
+                      onClick={() => updateSettings({ ...settings, fontStyle: value })}
+                      className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                        settings.fontStyle === value
+                          ? "bg-neutral-800 text-white dark:bg-neutral-200 dark:text-neutral-900"
+                          : "border border-neutral-300 text-neutral-500 hover:border-neutral-400 dark:border-neutral-600 dark:text-neutral-400"
+                      } disabled:opacity-50`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
             )}
 
             <CoverPicker cover={cover} disabled={exporting !== null} onChange={setCover} />

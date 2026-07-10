@@ -85,6 +85,8 @@ function validate(
       ? b.fileName.trim().slice(0, 120)
       : "翻譯文件";
 
+  const fontStyle = b.fontStyle === "sans" ? "sans" : "serif";
+
   let coverImage: string | undefined;
   if (b.coverImage !== undefined) {
     if (
@@ -104,6 +106,7 @@ function validate(
       mode: b.mode as ExportMode,
       targetLang: b.targetLang as TranslationPdfProps["targetLang"],
       pages,
+      fontStyle,
       ...(coverImage ? { coverImage } : {}),
     },
     wordBankOpts: parseWordBankOptions(b.wordBank),

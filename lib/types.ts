@@ -10,6 +10,9 @@ export interface WordBankSettings {
   minFreqRank: number;
 }
 
+/** PDF 內文字體:serif=明體(書籍感)、sans=黑體(輕鬆) */
+export type PdfFontStyle = "serif" | "sans";
+
 export interface TranslateSettings {
   provider: Provider;
   targetLang: TargetLang;
@@ -17,6 +20,7 @@ export interface TranslateSettings {
   model: string;
   baseUrl: string;
   wordBank: WordBankSettings;
+  fontStyle: PdfFontStyle;
 }
 
 export interface TranslateRequestBody {
@@ -53,4 +57,5 @@ export const DEFAULT_SETTINGS: TranslateSettings = {
     tags: ["toefl", "ielts"],
     minFreqRank: 3000,
   },
+  fontStyle: "serif",
 };

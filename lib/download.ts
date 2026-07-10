@@ -1,4 +1,4 @@
-import type { PageTranslation, TargetLang, WordBankSettings } from "@/lib/types";
+import type { PageTranslation, PdfFontStyle, TargetLang, WordBankSettings } from "@/lib/types";
 
 function downloadBlob(filename: string, blob: Blob): void {
   const url = URL.createObjectURL(blob);
@@ -21,7 +21,8 @@ export async function fetchPdfBlob(
   mode: PdfMode,
   targetLang: TargetLang,
   coverImage?: string | null,
-  wordBank?: WordBankSettings
+  wordBank?: WordBankSettings,
+  fontStyle?: PdfFontStyle
 ): Promise<Blob> {
   const wordBankEnabled = wordBank?.enabled === true;
   const res = await fetch("/api/export-pdf", {
@@ -31,6 +32,7 @@ export async function fetchPdfBlob(
       fileName: baseName,
       mode,
       targetLang,
+      ...(fontStyle ? { fontStyle } : {}),
       ...(coverImage ? { coverImage } : {}),
       ...(wordBankEnabled ? { wordBank } : {}),
       pages: pages.map((p) => ({

@@ -25,12 +25,20 @@ export interface TranslationPdfProps {
   pages: ExportPage[];
   coverImage?: string;
   wordBank?: Record<number, WordBankPageData>;
+  fontStyle?: "serif" | "sans";
 }
 
 const fontDir = path.join(process.cwd(), "public", "fonts");
 
 Font.register({ family: "NotoSerifTC", src: path.join(fontDir, "NotoSerifTC-Regular.otf") });
 Font.register({ family: "NotoSerifSC", src: path.join(fontDir, "NotoSerifSC-Regular.otf") });
+Font.register({ family: "NotoSansTC", src: path.join(fontDir, "NotoSansTC-Regular.ttf") });
+Font.register({ family: "NotoSansSC", src: path.join(fontDir, "NotoSansSC-Regular.ttf") });
+
+const FAMILY_MAP = {
+  serif: { "zh-TW": "NotoSerifTC", "zh-CN": "NotoSerifSC" },
+  sans: { "zh-TW": "NotoSansTC", "zh-CN": "NotoSansSC" },
+} as const;
 // 音標(IPA)字形明體與內建 Times 都沒有,用 Noto Sans 專門渲染
 Font.register({ family: "NotoSansLatin", src: path.join(fontDir, "NotoSans-Regular.ttf") });
 
@@ -331,9 +339,10 @@ export function TranslationPdf({
   pages,
   coverImage,
   wordBank,
+  fontStyle = "serif",
 }: TranslationPdfProps) {
   const simplified = targetLang === "zh-CN";
-  const family = simplified ? "NotoSerifSC" : "NotoSerifTC";
+  const family = FAMILY_MAP[fontStyle][targetLang];
   const modeLabel =
     mode === "bilingual" ? (simplified ? "中英对照" : "中英對照") : (simplified ? "中文翻译" : "中文翻譯");
 
