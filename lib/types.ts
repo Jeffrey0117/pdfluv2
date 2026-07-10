@@ -2,12 +2,21 @@ export type Provider = "google" | "openai";
 
 export type TargetLang = "zh-TW" | "zh-CN";
 
+export interface WordBankSettings {
+  enabled: boolean;
+  /** 勾選的考試字表(cet4/cet6/toefl/ielts/gre) */
+  tags: string[];
+  /** 詞頻門檻:排名在此之內的常用字不標 */
+  minFreqRank: number;
+}
+
 export interface TranslateSettings {
   provider: Provider;
   targetLang: TargetLang;
   apiKey: string;
   model: string;
   baseUrl: string;
+  wordBank: WordBankSettings;
 }
 
 export interface TranslateRequestBody {
@@ -39,4 +48,9 @@ export const DEFAULT_SETTINGS: TranslateSettings = {
   apiKey: "",
   model: "gpt-4o-mini",
   baseUrl: "https://api.openai.com/v1",
+  wordBank: {
+    enabled: false,
+    tags: ["toefl", "ielts"],
+    minFreqRank: 3000,
+  },
 };

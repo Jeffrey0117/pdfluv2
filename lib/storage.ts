@@ -8,6 +8,7 @@ export interface SavedSession {
   fileName: string;
   savedAt: number;
   pages: PageTranslation[];
+  cover?: string | null;
 }
 
 function openDb(): Promise<IDBDatabase> {

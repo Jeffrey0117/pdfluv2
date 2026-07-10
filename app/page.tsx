@@ -1,9 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { CoverPicker } from "@/components/CoverPicker";
 import { PageCard } from "@/components/PageCard";
 import { ProviderSettings } from "@/components/ProviderSettings";
 import { UploadZone } from "@/components/UploadZone";
+import { WordBankPanel } from "@/components/WordBankPanel";
 import { downloadTranslation, fetchPdfBlob, savePdfBlob, type PdfMode } from "@/lib/download";
 import { extractPdfPages } from "@/lib/extract";
 import { clearSession, loadSession, saveSession, type SavedSession } from "@/lib/storage";
@@ -32,7 +34,8 @@ export default function Home() {
   const [globalError, setGlobalError] = useState("");
   const [exporting, setExporting] = useState<PdfMode | null>(null);
   const [saved, setSaved] = useState<SavedSession | null>(null);
-  const [readyPdf, setReadyPdf] = useState<{ key: number; blob: Blob } | null>(null);
+  const [cover, setCover] = useState<string | null>(null);
+  const [readyPdf, setReadyPdf] = useState<{ key: string; blob: Blob } | null>(null);
   const runIdRef = useRef(0);
 
   useEffect(() => {
@@ -47,10 +50,10 @@ export default function Home() {
   useEffect(() => {
     if (pages.length === 0 || fileName.length === 0) return;
     const timer = setTimeout(() => {
-      saveSession({ fileName, savedAt: Date.now(), pages }).catch(() => {});
+      saveSession({ fileName, savedAt: Date.now(), pages, cover }).catch(() => {});
     }, 1000);
     return () => clearTimeout(timer);
-  }, [pages, fileName]);
+  }, [pages, fileName, cover]);
 
   const updateSettings = (next: TranslateSettings) => {
     setSettings(next);
@@ -97,6 +100,7 @@ export default function Home() {
     setSaved(null);
     setReadyPdf(null);
     setFileName(file.name.replace(/\.pdf$/i, ""));
+    setCover(null);
     setPhase("extracting");
     setPages([]);
 
@@ -144,15 +148,22 @@ export default function Home() {
   const handleExportPdf = async (mode: PdfMode) => {
     if (exporting) return;
     const baseName = fileName || "pdfluv2";
-    if (mode === "translated" && readyPdf && readyPdf.key === donePages.length) {
+    if (mode === "translated" && readyPdf && readyPdf.key === pdfKey) {
       savePdfBlob(baseName, mode, readyPdf.blob);
       return;
     }
     setExporting(mode);
     setGlobalError("");
     try {
-      const blob = await fetchPdfBlob(baseName, donePages, mode, settings.targetLang);
-      if (mode === "translated") setReadyPdf({ key: donePages.length, blob });
+      const blob = await fetchPdfBlob(
+        baseName,
+        donePages,
+        mode,
+        settings.targetLang,
+        cover,
+        settings.wordBank
+      );
+      if (mode === "translated") setReadyPdf({ key: pdfKey, blob });
       savePdfBlob(baseName, mode, blob);
     } catch (error) {
       setGlobalError(error instanceof Error ? error.message : "PDF 產生失敗");
@@ -170,6 +181,7 @@ export default function Home() {
     setGlobalError("");
     setReadyPdf(null);
     setFileName(saved.fileName);
+    setCover(saved.cover ?? null);
     setPages(restored);
 
     const runId = runIdRef.current + 1;
@@ -196,6 +208,7 @@ export default function Home() {
     setFileName("");
     setGlobalError("");
     setReadyPdf(null);
+    setCover(null);
     clearSession().catch(() => {});
   };
 
@@ -203,6 +216,13 @@ export default function Home() {
   const failedPages = pages.filter((p) => p.status === "error");
   const busy = phase === "extracting" || phase === "translating";
   const donePages = pages.filter((p) => p.status === "done" && p.translated.length > 0);
+  // 語言、封面、難字設定或任一頁內容變了,預先產生的 PDF 就失效
+  const pdfKey = [
+    settings.targetLang,
+    `${cover?.length ?? 0}:${cover?.slice(-24) ?? ""}`,
+    JSON.stringify(settings.wordBank),
+    donePages.map((p) => `${p.pageNumber}:${p.translated.length}`).join(","),
+  ].join("|");
 
   const handleRetryFailed = async () => {
     for (const page of failedPages) {
@@ -212,20 +232,26 @@ export default function Home() {
 
   useEffect(() => {
     if (phase !== "done" || donePages.length === 0) return;
-    const key = donePages.length;
-    if (readyPdf?.key === key) return;
+    if (readyPdf?.key === pdfKey) return;
 
     let cancelled = false;
-    fetchPdfBlob(fileName || "pdfluv2", donePages, "translated", settings.targetLang)
+    fetchPdfBlob(
+      fileName || "pdfluv2",
+      donePages,
+      "translated",
+      settings.targetLang,
+      cover,
+      settings.wordBank
+    )
       .then((blob) => {
-        if (!cancelled) setReadyPdf({ key, blob });
+        if (!cancelled) setReadyPdf({ key: pdfKey, blob });
       })
       .catch(() => {});
     return () => {
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [phase, pages, readyPdf, fileName, settings.targetLang]);
+  }, [phase, pages, readyPdf, fileName, settings.targetLang, cover, settings.wordBank]);
 
   return (
     <main className="mx-auto max-w-5xl px-4 py-10">
@@ -323,7 +349,7 @@ export default function Home() {
                     {exporting === "translated"
                       ? "產生中…"
                       : phase === "done"
-                        ? readyPdf?.key === donePages.length
+                        ? readyPdf?.key === pdfKey
                           ? "下載翻譯 PDF（已就緒）"
                           : "下載翻譯 PDF"
                         : `部分翻譯 PDF（${doneCount}/${pages.length}）`}
@@ -357,6 +383,14 @@ export default function Home() {
                 換一份 PDF
               </button>
             </div>
+
+            <CoverPicker cover={cover} disabled={exporting !== null} onChange={setCover} />
+
+            <WordBankPanel
+              value={settings.wordBank}
+              disabled={exporting !== null}
+              onChange={(wordBank) => updateSettings({ ...settings, wordBank })}
+            />
 
             {exporting !== null && (
               <p className="w-full text-sm text-neutral-500 dark:text-neutral-400">

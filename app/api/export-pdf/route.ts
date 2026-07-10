@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { renderToBuffer, type DocumentProps } from "@react-pdf/renderer";
 import type { ReactElement } from "react";
 import { checkRateLimit } from "@/lib/server/rateLimit";
+import { buildWordBank, type WordBankOptions } from "@/lib/server/difficultWords";
 import {
   TranslationPdf,
   type ExportMode,
@@ -12,10 +13,36 @@ import {
 
 const MAX_PAGES = 2000;
 const MAX_TOTAL_CHARS = 2_000_000;
+const COVER_PREFIX = /^data:image\/(jpeg|png);base64,/;
+// base64 膨脹約 4/3,對應解碼後約 8MB
+const MAX_COVER_CHARS = 11_000_000;
 const TARGET_LANGS = new Set(["zh-TW", "zh-CN"]);
 const MODES = new Set<ExportMode>(["translated", "bilingual"]);
+const WORD_BANK_TAGS = new Set(["cet4", "cet6", "toefl", "ielts", "gre"]);
 
-function validate(body: unknown): { ok: true; data: TranslationPdfProps } | { ok: false; error: string } {
+function parseWordBankOptions(raw: unknown): WordBankOptions | undefined {
+  if (typeof raw !== "object" || raw === null) return undefined;
+  const w = raw as Record<string, unknown>;
+  if (w.enabled !== true) return undefined;
+
+  const tags = Array.isArray(w.tags)
+    ? w.tags.filter((t): t is string => typeof t === "string" && WORD_BANK_TAGS.has(t))
+    : [];
+  const minFreqRank =
+    typeof w.minFreqRank === "number" && Number.isFinite(w.minFreqRank)
+      ? Math.min(100000, Math.max(0, Math.floor(w.minFreqRank)))
+      : 0;
+
+  // 沒選考試也沒設詞頻,等於沒有判定標準
+  if (tags.length === 0 && minFreqRank === 0) return undefined;
+  return { tags, minFreqRank };
+}
+
+function validate(
+  body: unknown
+):
+  | { ok: true; data: TranslationPdfProps; wordBankOpts?: WordBankOptions }
+  | { ok: false; error: string } {
   if (typeof body !== "object" || body === null) {
     return { ok: false, error: "請求格式錯誤" };
   }
@@ -54,6 +81,18 @@ function validate(body: unknown): { ok: true; data: TranslationPdfProps } | { ok
       ? b.fileName.trim().slice(0, 120)
       : "翻譯文件";
 
+  let coverImage: string | undefined;
+  if (b.coverImage !== undefined) {
+    if (
+      typeof b.coverImage !== "string" ||
+      !COVER_PREFIX.test(b.coverImage) ||
+      b.coverImage.length > MAX_COVER_CHARS
+    ) {
+      return { ok: false, error: "封面圖片格式錯誤或過大（僅支援 JPG/PNG，8MB 以內）" };
+    }
+    coverImage = b.coverImage;
+  }
+
   return {
     ok: true,
     data: {
@@ -61,7 +100,9 @@ function validate(body: unknown): { ok: true; data: TranslationPdfProps } | { ok
       mode: b.mode as ExportMode,
       targetLang: b.targetLang as TranslationPdfProps["targetLang"],
       pages,
+      ...(coverImage ? { coverImage } : {}),
     },
+    wordBankOpts: parseWordBankOptions(b.wordBank),
   };
 }
 
@@ -78,7 +119,13 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   }
 
   try {
-    const element = createElement(TranslationPdf, result.data) as unknown as ReactElement<DocumentProps>;
+    const wordBank = result.wordBankOpts
+      ? buildWordBank(result.data.pages, result.wordBankOpts, result.data.targetLang)
+      : undefined;
+    const element = createElement(TranslationPdf, {
+      ...result.data,
+      ...(wordBank ? { wordBank } : {}),
+    }) as unknown as ReactElement<DocumentProps>;
     const buffer = await renderToBuffer(element);
     return new NextResponse(new Uint8Array(buffer), {
       headers: {

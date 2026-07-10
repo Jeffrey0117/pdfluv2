@@ -1,4 +1,4 @@
-import type { PageTranslation, TargetLang } from "@/lib/types";
+import type { PageTranslation, TargetLang, WordBankSettings } from "@/lib/types";
 
 function downloadBlob(filename: string, blob: Blob): void {
   const url = URL.createObjectURL(blob);
@@ -19,8 +19,11 @@ export async function fetchPdfBlob(
   baseName: string,
   pages: PageTranslation[],
   mode: PdfMode,
-  targetLang: TargetLang
+  targetLang: TargetLang,
+  coverImage?: string | null,
+  wordBank?: WordBankSettings
 ): Promise<Blob> {
+  const wordBankEnabled = wordBank?.enabled === true;
   const res = await fetch("/api/export-pdf", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -28,9 +31,12 @@ export async function fetchPdfBlob(
       fileName: baseName,
       mode,
       targetLang,
+      ...(coverImage ? { coverImage } : {}),
+      ...(wordBankEnabled ? { wordBank } : {}),
       pages: pages.map((p) => ({
         pageNumber: p.pageNumber,
-        original: mode === "bilingual" ? p.original : "",
+        // word bank 要掃英文原文,純翻譯模式也得帶上
+        original: mode === "bilingual" || wordBankEnabled ? p.original : "",
         translated: p.translated,
       })),
     }),
