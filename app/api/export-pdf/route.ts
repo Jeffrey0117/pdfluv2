@@ -3,7 +3,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { renderToBuffer, type DocumentProps } from "@react-pdf/renderer";
 import type { ReactElement } from "react";
 import { checkRateLimit } from "@/lib/server/rateLimit";
-import { buildWordBank, type WordBankOptions } from "@/lib/server/difficultWords";
+import {
+  buildWordBank,
+  translateBankExamples,
+  type WordBankOptions,
+} from "@/lib/server/difficultWords";
 import {
   TranslationPdf,
   type ExportMode,
@@ -120,7 +124,10 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
   try {
     const wordBank = result.wordBankOpts
-      ? buildWordBank(result.data.pages, result.wordBankOpts, result.data.targetLang)
+      ? await translateBankExamples(
+          buildWordBank(result.data.pages, result.wordBankOpts, result.data.targetLang),
+          result.data.targetLang
+        )
       : undefined;
     const element = createElement(TranslationPdf, {
       ...result.data,

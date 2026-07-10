@@ -1,5 +1,7 @@
 import fs from "fs";
 import path from "path";
+import { translateFree } from "@/lib/server/freeTranslate";
+import type { TargetLang } from "@/lib/types";
 
 export interface WordBankOptions {
   /** 勾選的考試標籤(cet4/cet6/toefl/ielts/gre) */
@@ -19,6 +21,8 @@ export interface BankEntry {
   def: string;
   tags: string[];
   example: HighlightSegment[];
+  /** 例句的中文翻譯(免費引擎批次翻譯,失敗時缺省) */
+  exampleZh?: string;
 }
 
 export interface WordBankPageData {
@@ -186,6 +190,82 @@ function analyzeParagraph(
     segments.push({ text: paragraph.slice(cursor), hl: false });
   }
   return { segments, bank };
+}
+
+/** 例句去掉引號/省略號後的純文字,給翻譯引擎用 */
+function examplePlainText(example: HighlightSegment[]): string {
+  return example
+    .map((seg) => seg.text)
+    .join("")
+    .replace(/[“”…]/g, "")
+    .trim();
+}
+
+const TRANSLATE_BATCH_CHARS = 2800;
+
+/**
+ * 批次翻譯所有 word bank 例句(多句以換行打包成一次呼叫)。
+ * 任一批行數對不上或引擎失敗,該批例句就不附翻譯,不影響匯出。
+ */
+export async function translateBankExamples(
+  wordBank: Record<number, WordBankPageData>,
+  targetLang: TargetLang
+): Promise<Record<number, WordBankPageData>> {
+  const allEntries = Object.values(wordBank).flatMap((page) => page.bank);
+  if (allEntries.length === 0) return wordBank;
+
+  const sentences = allEntries.map((entry) => examplePlainText(entry.example));
+
+  // 貪婪打包成 ≤ TRANSLATE_BATCH_CHARS 的批次
+  const batches: { start: number; lines: string[] }[] = [];
+  let current: string[] = [];
+  let currentChars = 0;
+  let start = 0;
+  sentences.forEach((sentence, i) => {
+    if (current.length > 0 && currentChars + sentence.length > TRANSLATE_BATCH_CHARS) {
+      batches.push({ start, lines: current });
+      current = [];
+      currentChars = 0;
+      start = i;
+    }
+    current = [...current, sentence];
+    currentChars += sentence.length + 1;
+  });
+  if (current.length > 0) batches.push({ start, lines: current });
+
+  const translations: (string | undefined)[] = new Array(sentences.length).fill(undefined);
+  for (const batch of batches) {
+    try {
+      const result = await translateFree(batch.lines.join("\n"), targetLang);
+      const lines = result.split("\n").map((line) => line.trim());
+      if (lines.length === batch.lines.length) {
+        lines.forEach((line, i) => {
+          if (line.length > 0) translations[batch.start + i] = line;
+        });
+      }
+    } catch (error) {
+      console.error(
+        "例句翻譯失敗,略過此批:",
+        error instanceof Error ? error.message : error
+      );
+    }
+  }
+
+  // 依序把翻譯掛回每頁的 bank(不動原資料)
+  let cursor = 0;
+  return Object.fromEntries(
+    Object.entries(wordBank).map(([pageNumber, page]) => [
+      pageNumber,
+      {
+        ...page,
+        bank: page.bank.map((entry) => {
+          const exampleZh = translations[cursor];
+          cursor++;
+          return exampleZh ? { ...entry, exampleZh } : entry;
+        }),
+      },
+    ])
+  );
 }
 
 /**

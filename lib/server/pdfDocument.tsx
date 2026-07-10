@@ -192,6 +192,12 @@ const styles = StyleSheet.create({
     textDecoration: "underline",
     textDecorationColor: "#dc2626",
   },
+  bankExampleZh: {
+    fontSize: 8,
+    lineHeight: 1.4,
+    color: "#6b6b6b",
+    marginTop: 0.5,
+  },
 });
 
 // 原文若混有 CJK 字元,Times-Roman 沒有字形,退回明體
@@ -256,6 +262,9 @@ function WordBankSection({ bank, family }: { bank: BankEntry[]; family: string }
             <Text style={exampleStyle}>
               {segmentsToNodes(entry.example, styles.bankExampleWord)}
             </Text>
+            {entry.exampleZh ? (
+              <Text style={styles.bankExampleZh}>「{entry.exampleZh}」</Text>
+            ) : null}
           </View>
         );
       })}
