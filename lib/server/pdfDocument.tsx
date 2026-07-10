@@ -125,12 +125,14 @@ const styles = StyleSheet.create({
   coverPage: {
     padding: 0,
   },
+  // A4 = 595.28 x 841.89 pt。log 的「IMAGE can't wrap」警告是 react-pdf
+  // 對絕對定位滿版圖的誤判,輸出正確,無害
   coverImage: {
     position: "absolute",
     top: 0,
     left: 0,
-    width: "100%",
-    height: "100%",
+    width: 595.28,
+    height: 841.89,
     objectFit: "cover",
   },
   hlWord: {
@@ -338,7 +340,8 @@ export function TranslationPdf({
   return (
     <Document title={`${fileName} - ${modeLabel}`} producer="PDFluv2" creator="PDFluv2">
       {coverImage && (
-        <Page size="A4" style={styles.coverPage} wrap={false}>
+        // 注意:這頁不能加 wrap={false},react-pdf 會產出無效 MediaBox 變空白頁
+        <Page size="A4" style={styles.coverPage}>
           <Image src={coverImage} style={styles.coverImage} />
         </Page>
       )}
