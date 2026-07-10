@@ -19,7 +19,7 @@ async function getToken(forceRefresh = false): Promise<string> {
   if (!forceRefresh && cachedToken && Date.now() < cachedToken.expiresAt) {
     return cachedToken.value;
   }
-  const res = await fetch(AUTH_ENDPOINT);
+  const res = await fetch(AUTH_ENDPOINT, { signal: AbortSignal.timeout(10_000) });
   if (!res.ok) {
     throw new Error(`Bing 翻譯取得憑證失敗（${res.status}）`);
   }
@@ -36,6 +36,7 @@ async function requestTranslation(text: string, targetLang: TargetLang, token: s
       Authorization: `Bearer ${token}`,
     },
     body: JSON.stringify([{ Text: text }]),
+    signal: AbortSignal.timeout(15_000),
   });
 }
 

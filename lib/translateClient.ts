@@ -22,6 +22,8 @@ async function requestTranslate(
       model: settings.provider === "openai" ? settings.model : undefined,
       baseUrl: settings.provider === "openai" ? settings.baseUrl : undefined,
     }),
+    // 保底 timeout:任何一環掛住都不能讓整個翻譯循環永久卡死
+    signal: AbortSignal.timeout(60_000),
   });
   const data = (await res.json().catch(() => null)) as TranslateResponseBody | null;
   return { status: res.status, data };
@@ -32,12 +34,19 @@ async function translateChunk(chunk: string, settings: TranslateSettings): Promi
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
     if (attempt > 1) await sleep(1500 * 2 ** (attempt - 2));
 
-    const { status, data } = await requestTranslate(chunk, settings);
-    if (data?.success && data.data) return data.data.translated;
+    try {
+      const { status, data } = await requestTranslate(chunk, settings);
+      if (data?.success && data.data) return data.data.translated;
 
-    lastError = data?.error ?? `翻譯請求失敗（HTTP ${status}）`;
-    // 參數錯誤重試也沒用;429/5xx 是暫時性的,退避後再試
-    if (status === 400) break;
+      lastError = data?.error ?? `翻譯請求失敗（HTTP ${status}）`;
+      // 參數錯誤重試也沒用;429/5xx 是暫時性的,退避後再試
+      if (status === 400) break;
+    } catch (error) {
+      // timeout / 網路錯誤,一樣退避重試
+      lastError = error instanceof Error && error.name === "TimeoutError"
+        ? "翻譯請求逾時"
+        : "網路錯誤,請檢查連線";
+    }
   }
   throw new Error(lastError);
 }

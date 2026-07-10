@@ -26,6 +26,7 @@ export async function translateWithGoogle(text: string, targetLang: TargetLang):
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: new URLSearchParams({ q: text }),
+      signal: AbortSignal.timeout(15_000),
     });
 
     if (res.ok) {

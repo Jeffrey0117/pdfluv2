@@ -217,18 +217,28 @@ export default function Home() {
   const failedPages = pages.filter((p) => p.status === "error");
   const busy = phase === "extracting" || phase === "translating";
   const donePages = pages.filter((p) => p.status === "done" && p.translated.length > 0);
+  const unfinishedPages = pages.filter((p) => p.status !== "done");
+
+  const handlePause = () => {
+    runIdRef.current += 1;
+    setPhase("done");
+  };
+
+  const handleContinue = async () => {
+    if (unfinishedPages.length === 0) return;
+    const runId = runIdRef.current + 1;
+    runIdRef.current = runId;
+    setGlobalError("");
+    setPhase("translating");
+    await translateAll(unfinishedPages, runId);
+    if (runIdRef.current === runId) setPhase("done");
+  };
   // 預先產生的是閱讀版(純中文、無難字標註);語言、封面或任一頁內容變了就失效
   const pdfKey = [
     settings.targetLang,
     `${cover?.length ?? 0}:${cover?.slice(-24) ?? ""}`,
     donePages.map((p) => `${p.pageNumber}:${p.translated.length}`).join(","),
   ].join("|");
-
-  const handleRetryFailed = async () => {
-    for (const page of failedPages) {
-      await handleRetry(page.pageNumber);
-    }
-  };
 
   useEffect(() => {
     if (phase !== "done" || donePages.length === 0) return;
@@ -329,13 +339,22 @@ export default function Home() {
             )}
 
             <div className="flex flex-wrap gap-2">
-              {!busy && failedPages.length > 0 && (
+              {phase === "translating" && (
                 <button
                   type="button"
-                  onClick={handleRetryFailed}
+                  onClick={handlePause}
+                  className="rounded-full border border-neutral-300 px-4 py-2 text-sm font-medium text-neutral-600 hover:bg-neutral-100 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-800"
+                >
+                  暫停
+                </button>
+              )}
+              {!busy && unfinishedPages.length > 0 && (
+                <button
+                  type="button"
+                  onClick={handleContinue}
                   className="rounded-full bg-amber-500 px-4 py-2 text-sm font-medium text-white hover:bg-amber-600"
                 >
-                  重試失敗頁（{failedPages.length}）
+                  繼續翻譯（剩 {unfinishedPages.length} 頁）
                 </button>
               )}
               {donePages.length > 0 && (
