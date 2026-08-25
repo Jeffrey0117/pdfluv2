@@ -1,3 +1,4 @@
+import { ensureTargetScript } from "@/lib/server/zhConvert";
 import type { TargetLang } from "@/lib/types";
 
 const LANG_NAMES: Record<TargetLang, string> = {
@@ -54,5 +55,5 @@ export async function translateWithOpenAi(
     throw new Error("AI 回傳內容為空");
   }
 
-  return content.trim();
+  return ensureTargetScript(content.trim(), targetLang);
 }

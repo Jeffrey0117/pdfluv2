@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { renderToBuffer, type DocumentProps } from "@react-pdf/renderer";
 import type { ReactElement } from "react";
 import { checkRateLimit } from "@/lib/server/rateLimit";
+import { ensureTargetScript } from "@/lib/server/zhConvert";
 import {
   buildWordBank,
   translateBankExamples,
@@ -74,7 +75,12 @@ function validate(
     }
     const original = typeof p.original === "string" ? p.original : "";
     totalChars += p.translated.length + original.length;
-    pages.push({ pageNumber: p.pageNumber, original, translated: p.translated });
+    // 匯出時也轉繁:修正換端點前已翻好、存在瀏覽器裡夾簡體的舊資料
+    pages.push({
+      pageNumber: p.pageNumber,
+      original,
+      translated: ensureTargetScript(p.translated, b.targetLang as TranslationPdfProps["targetLang"]),
+    });
   }
   if (totalChars > MAX_TOTAL_CHARS) {
     return { ok: false, error: "內容過大，無法產生 PDF" };

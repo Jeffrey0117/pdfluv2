@@ -1,7 +1,7 @@
 {
   "name": "pdfluv2",
   "version": "0.1.0",
-  "description": "丟進英文 PDF，拿回排版好的中文 PDF。免費 Google/Bing 翻譯自動容錯，或自帶 GPT key。",
+  "description": "丟進英文 PDF，拿回排版好的中文 PDF。免費 Google 翻譯，或自帶 GPT key。",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -12,6 +12,7 @@
   "dependencies": {
     "@react-pdf/renderer": "^4.5.1",
     "next": "16.2.10",
+    "opencc-js": "^1.4.0",
     "pdfjs-dist": "^6.1.200",
     "react": "19.2.4",
     "react-dom": "19.2.4"
@@ -23,7 +24,6 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.2.10",
-    "opencc-js": "^1.4.0",
     "tailwindcss": "^4",
     "typescript": "^5"
   }
