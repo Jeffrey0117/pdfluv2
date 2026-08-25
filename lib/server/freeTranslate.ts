@@ -1,19 +1,21 @@
-import { translateWithBing } from "@/lib/server/bing";
 import { translateWithGoogle } from "@/lib/server/google";
 import type { TargetLang } from "@/lib/types";
 
-const GOOGLE_COOLDOWN_MS = 2 * 60 * 1000;
+// Bing 免費憑證端點已被微軟下架(404),備援移除,只走 Google
+const GOOGLE_COOLDOWN_MS = 60 * 1000;
 
 let googleBlockedUntil = 0;
 
 export async function translateFree(text: string, targetLang: TargetLang): Promise<string> {
-  if (Date.now() >= googleBlockedUntil) {
-    try {
-      return await translateWithGoogle(text, targetLang);
-    } catch (error) {
-      console.error("Google 翻譯失敗，切換 Bing:", error instanceof Error ? error.message : error);
+  if (Date.now() < googleBlockedUntil) {
+    throw new Error("Google 免費翻譯暫時被限流（429），請等幾分鐘再按重試，或改用 AI 翻譯（GPT key）");
+  }
+  try {
+    return await translateWithGoogle(text, targetLang);
+  } catch (error) {
+    if (error instanceof Error && error.message.includes("429")) {
       googleBlockedUntil = Date.now() + GOOGLE_COOLDOWN_MS;
     }
+    throw error;
   }
-  return translateWithBing(text, targetLang);
 }

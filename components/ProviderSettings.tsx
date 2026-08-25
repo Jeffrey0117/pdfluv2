@@ -22,7 +22,7 @@ export function ProviderSettings({ settings, disabled, onChange }: ProviderSetti
         </span>
         {(
           [
-            { value: "google", label: "免費翻譯（Google / Bing 自動切換）" },
+            { value: "google", label: "免費翻譯（Google）" },
             { value: "openai", label: "AI 翻譯（GPT / 相容 API）" },
           ] as Array<{ value: Provider; label: string }>
         ).map((opt) => (
