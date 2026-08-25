@@ -30,16 +30,16 @@
 |---|---|---|---|
 | 整本書的 PDF | 10 MB 上限、格式跑掉 | 有貼上長度限制，要一頁頁餵 | **不限大小，自動逐頁跑** |
 | 產出 | 亂掉的網頁 | 聊天泡泡 | **排版好的 PDF（純翻譯／中英對照）** |
-| 費用 | 免費 | 量大要訂閱 | **免費（Google/Bing）或自帶 GPT key** |
-| 被限流怎麼辦 | 自己重試 | — | **自動換引擎＋失敗頁一鍵重試** |
+| 費用 | 免費 | 量大要訂閱 | **免費（Google）或自帶 GPT key** |
+| 被限流怎麼辦 | 自己重試 | — | **自動冷卻＋失敗頁一鍵重試** |
 | 重新整理進度消失 | 會 | 會 | **不會——斷點續翻** |
 
 ---
 
 ## PDFluv2 好在哪
 
-### 雙免費引擎自動容錯
-翻整本書很容易把 Google 免費端點打到 429。PDFluv2 偵測到就自動切去 Bing 免費端點，還有冷卻機制，不會在被封鎖的引擎上浪費時間。
+### 免費翻譯不怕限流
+翻整本書很容易把免費端點打到 429。PDFluv2 偵測到就先冷卻退避，不會狂打把封鎖越弄越久；失敗的頁面等限流解除後一鍵重試就好。
 
 ### 真正排版好的 PDF
 不是 `.txt`。A4 版面、內嵌並 subset 過的 Noto Sans TC/SC 字型、自動頁碼、每頁原文標籤——205 頁的書輸出只有約 300 KB，文字可選取可搜尋。
@@ -85,8 +85,8 @@ lib/
   translateClient.ts       逐頁翻譯調度
   storage.ts               IndexedDB 進度保存
   server/
-    freeTranslate.ts       Google → Bing 容錯
-    google.ts / bing.ts    免費引擎（重試＋token 快取）
+    freeTranslate.ts       免費引擎＋429 冷卻
+    google.ts              Google 介接（重試＋退避）
     openai.ts              OpenAI 相容介接
     pdfDocument.tsx        @react-pdf/renderer 排版（中文斷行）
 public/fonts/              Noto Sans TC/SC（TrueType，匯出時 subset）
@@ -102,7 +102,7 @@ public/fonts/              Noto Sans TC/SC（TrueType，匯出時 subset）
 
 | 設定 | 位置 | 必填 | 說明 |
 |---|---|---|---|
-| 翻譯引擎 | 介面切換 | — | 免費（Google/Bing）或 AI（GPT） |
+| 翻譯引擎 | 介面切換 | — | 免費（Google）或 AI（GPT） |
 | 目標語言 | 介面 | — | 繁體中文／简体中文 |
 | API Key | 介面，只存 localStorage | 只有 AI 模式需要 | 任何 OpenAI 相容服務 |
 | Base URL / 模型 | 介面 | 選填 | 預設 `api.openai.com/v1`、`gpt-4o-mini` |
@@ -111,7 +111,7 @@ public/fonts/              Noto Sans TC/SC（TrueType，匯出時 subset）
 
 ## Roadmap
 
-- [x] 免費雙引擎自動容錯
+- [x] 免費 Google 翻譯＋限流冷卻
 - [x] 排版 PDF 匯出（純翻譯／逐段中英對照）
 - [x] 斷點續翻（IndexedDB）
 - [x] 背景預先產生 PDF（按下載秒拿）

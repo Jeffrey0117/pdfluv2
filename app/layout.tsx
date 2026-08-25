@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "PDFluv2 — PDF 英翻中",
-  description: "上傳英文 PDF，一鍵翻譯成中文並輸出排版好的 PDF。免費 Google/Bing 翻譯或自帶 GPT API Key。",
+  description: "上傳英文 PDF，一鍵翻譯成中文並輸出排版好的 PDF。免費 Google 翻譯或自帶 GPT API Key。",
 };
 
 export default function RootLayout({

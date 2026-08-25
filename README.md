@@ -30,16 +30,16 @@ No account. No upload of your file to anyone's server. No API key required.
 |---|---|---|---|
 | Whole-book PDFs | 10 MB / formatting breaks | Paste limit, page by page | **Any size, page by page automatically** |
 | Output | Messy HTML-ish page | Chat bubbles | **Typeset PDF (translated or bilingual)** |
-| Cost | Free | Subscription for volume | **Free (Google/Bing) or your own GPT key** |
-| Rate-limit handling | You retry manually | — | **Auto engine fallback + one-click retry** |
+| Cost | Free | Subscription for volume | **Free (Google) or your own GPT key** |
+| Rate-limit handling | You retry manually | — | **Auto cooldown + one-click retry** |
 | Lose progress on refresh | Yes | Yes | **No — resumes from where it stopped** |
 
 ---
 
 ## What Makes PDFluv2 Nice
 
-### Dual free engines with automatic failover
-Google Translate's free endpoint gets rate-limited if you translate a whole book. PDFluv2 detects the 429 and silently switches to Bing's free endpoint, with a cooldown so it never wastes time on a blocked engine.
+### Free translation that survives rate limits
+Translate a whole book and free endpoints will 429 you. PDFluv2 detects it, backs off with a cooldown instead of hammering the endpoint, and fails fast with a clear message — retry the failed pages with one click once the limit clears.
 
 ### Real typeset PDF output
 Not a `.txt` dump. A4 pages, embedded (and subsetted) Noto Sans TC/SC fonts, page numbers, per-source-page labels — a 205-page book exports to a ~300 KB PDF with selectable text.
@@ -85,8 +85,8 @@ lib/
   translateClient.ts       per-page translation orchestration
   storage.ts               IndexedDB progress persistence
   server/
-    freeTranslate.ts       Google → Bing failover
-    google.ts / bing.ts    free engine adapters (retry + token cache)
+    freeTranslate.ts       free engine + 429 cooldown
+    google.ts              Google adapter (retry + backoff)
     openai.ts              OpenAI-compatible adapter
     pdfDocument.tsx        @react-pdf/renderer layout (CJK line breaking)
 public/fonts/              Noto Sans TC/SC (TrueType, subset on export)
@@ -102,7 +102,7 @@ Your PDF never leaves the browser — only extracted text is sent for translatio
 
 | Setting | Where | Required | Notes |
 |---|---|---|---|
-| Engine | UI toggle | — | Free (Google/Bing) or AI (GPT) |
+| Engine | UI toggle | — | Free (Google) or AI (GPT) |
 | Target language | UI | — | 繁體中文 / 简体中文 |
 | API key | UI, localStorage only | Only for AI mode | Any OpenAI-compatible provider |
 | Base URL / model | UI | Optional | Defaults: `api.openai.com/v1`, `gpt-4o-mini` |
@@ -111,7 +111,7 @@ Your PDF never leaves the browser — only extracted text is sent for translatio
 
 ## Roadmap
 
-- [x] Free dual-engine translation with failover
+- [x] Free Google translation with rate-limit cooldown
 - [x] Typeset PDF export (translated / paragraph-aligned bilingual)
 - [x] Resume after refresh (IndexedDB)
 - [x] Background PDF pre-generation (instant download)
