@@ -103,9 +103,9 @@ const styles = StyleSheet.create({
   },
   original: {
     fontFamily: "Times-Roman",
-    fontSize: 8.5,
-    lineHeight: 1.62,
-    color: "#5b5b5b",
+    fontSize: 12,
+    lineHeight: 1.45,
+    color: "#3a3a3a",
     marginBottom: 4,
     textAlign: "justify",
   },
