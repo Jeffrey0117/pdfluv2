@@ -17,6 +17,9 @@ export const metadata: Metadata = {
   description: "上傳英文 PDF，一鍵翻譯成中文並輸出排版好的 PDF。免費 Google 翻譯或自帶 GPT API Key。",
 };
 
+const LMU_APP_ID = process.env.NEXT_PUBLIC_LETMEUSE_APP_ID || "";
+const LMU_BASE = process.env.NEXT_PUBLIC_LETMEUSE_BASE_URL || "";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -27,7 +30,20 @@ export default function RootLayout({
       lang="zh-TW"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col bg-neutral-50 dark:bg-neutral-950">{children}</body>
+      <body className="min-h-full flex flex-col bg-neutral-50 dark:bg-neutral-950">
+        {LMU_APP_ID && LMU_BASE && (
+          <script
+            defer
+            src={`${LMU_BASE}/letmeuse.js`}
+            data-app-id={LMU_APP_ID}
+            data-theme="auto"
+            data-accent="#f43f5e"
+            data-locale="zh"
+            data-mode="modal"
+          />
+        )}
+        {children}
+      </body>
     </html>
   );
 }

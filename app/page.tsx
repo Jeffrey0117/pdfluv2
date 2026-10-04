@@ -1,8 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { CoverPicker } from "@/components/CoverPicker";
 import { PageCard } from "@/components/PageCard";
+import { SiteNav } from "@/components/SiteNav";
+import { authFetch, useLetMeUse } from "@/components/useLetMeUse";
 import { ProviderSettings } from "@/components/ProviderSettings";
 import { UploadZone } from "@/components/UploadZone";
 import { WordBankPanel } from "@/components/WordBankPanel";
@@ -27,6 +30,9 @@ function loadSettings(): TranslateSettings {
 }
 
 export default function Home() {
+  const router = useRouter();
+  const { user, login } = useLetMeUse();
+  const [shelving, setShelving] = useState(false);
   const [settings, setSettings] = useState<TranslateSettings>(DEFAULT_SETTINGS);
   const [phase, setPhase] = useState<Phase>("idle");
   const [fileName, setFileName] = useState("");
@@ -242,6 +248,33 @@ export default function Home() {
     donePages.map((p) => `${p.pageNumber}:${p.translated.length}`).join(","),
   ].join("|");
 
+  // 存進書櫃（抽出的文字與譯文上傳到帳號，原始 PDF 不離開瀏覽器）
+  const handleShelve = async () => {
+    if (!user) {
+      login();
+      return;
+    }
+    if (shelving || donePages.length === 0) return;
+    setShelving(true);
+    setGlobalError("");
+    try {
+      const res = await authFetch("/api/books", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: fileName || "未命名的書",
+          pages: donePages.map((p) => ({ pageNumber: p.pageNumber, original: p.original, translated: p.translated })),
+        }),
+      });
+      const json = await res.json();
+      if (!json.success) throw new Error(json.error || "存書失敗");
+      router.push(`/read/${json.data.id}`);
+    } catch (error) {
+      setGlobalError(error instanceof Error ? error.message : "存書失敗");
+      setShelving(false);
+    }
+  };
+
   useEffect(() => {
     if (phase !== "done" || donePages.length === 0) return;
     if (readyPdf?.key === pdfKey) return;
@@ -274,7 +307,9 @@ export default function Home() {
   }, [phase, pages, readyPdf, fileName, settings.targetLang, cover, exporting, settings.fontStyle]);
 
   return (
-    <main className="mx-auto max-w-5xl px-4 py-10">
+    <>
+    <SiteNav />
+    <main className="mx-auto w-full max-w-5xl px-4 py-10">
       <header className="mb-8 text-center">
         <h1 className="text-4xl font-black tracking-tight text-neutral-900 dark:text-white">
           PDF<span className="text-rose-500">luv2</span>
@@ -369,6 +404,15 @@ export default function Home() {
               )}
               {donePages.length > 0 && (
                 <>
+                  <button
+                    type="button"
+                    disabled={shelving}
+                    onClick={handleShelve}
+                    title={user ? "存到帳號，隨時線上閱讀＋查單字" : "登入後把這本書存到帳號"}
+                    className="rounded-full bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-60"
+                  >
+                    {shelving ? "存入中…" : user ? "存進書櫃，線上閱讀 →" : "登入並存進書櫃"}
+                  </button>
                   <button
                     type="button"
                     disabled={exporting !== null}
@@ -467,7 +511,10 @@ export default function Home() {
 
       <footer className="mt-12 text-center text-xs text-neutral-400">
         PDF 只在你的瀏覽器解析；翻譯時僅將文字內容送到翻譯服務。API Key 只存在你的 localStorage。
+        <br />
+        「存進書櫃」會把抽出的文字與譯文（不含原始 PDF）存到你的帳號，供線上閱讀。
       </footer>
     </main>
+    </>
   );
 }

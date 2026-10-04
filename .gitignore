@@ -39,3 +39,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# 使用者資料（書櫃/生詞本）
+/data
+
+# local claude settings
+/.claude/
