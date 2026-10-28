@@ -23,12 +23,10 @@ function getJwks(): Jwks {
 export async function verifyToken(token: string): Promise<AuthUser | null> {
   try {
     const header = decodeProtectedHeader(token);
-    const result =
-      header.alg === "ES256"
-        ? await jwtVerify(token, getJwks(), { algorithms: ["ES256"] })
-        : await jwtVerify(token, new TextEncoder().encode(process.env.LETMEUSE_APP_SECRET || ""), {
-            algorithms: ["HS256"],
-          });
+    // 只收 ES256(JWKS)。⚠️ 2026-10-28 資安:廢除 HS256(pokkit 事件 — app secret 一洩
+    // 就能自簽任意 sub 偽造任何會員的書櫃/生詞本)。LetMeUse 已全面 ES256。
+    if (header.alg !== "ES256") return null;
+    const result = await jwtVerify(token, getJwks(), { algorithms: ["ES256"] });
     const payload = result.payload as Record<string, unknown>;
     if (APP_ID && payload.app !== APP_ID) return null; // 別的 app 的 token 不準借用
     const sub = String(payload.sub || payload.userId || "");
