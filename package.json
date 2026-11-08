@@ -7,11 +7,12 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test": "node --test --experimental-strip-types test/auth.test.ts"
   },
   "dependencies": {
     "@react-pdf/renderer": "^4.5.1",
-    "jose": "^6.2.12",
+    "jwks-verify-kit": "github:Jeffrey0117/jwks-verify-kit",
     "next": "16.2.10",
     "opencc-js": "^1.4.0",
     "pdfjs-dist": "^6.1.200",
