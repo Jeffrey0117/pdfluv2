@@ -45,3 +45,10 @@ next-env.d.ts
 
 # local claude settings
 /.claude/
+
+# CloudPipe 執行期產物（部署時由平台寫入）。追蹤它們會讓部署目錄變 dirty,
+# 之後的 webhook 部署被 dirty-check abort（infra-map 的 gitloop / areyoubot 實案）。
+.pkg-hash
+.deploy-state.json
+.pm2-ecosystem.json
+.pm2-bg-ecosystem.json
