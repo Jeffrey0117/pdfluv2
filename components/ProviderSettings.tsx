@@ -1,5 +1,6 @@
 "use client";
 
+import { SECRET_INPUT_CLASS, SECRET_INPUT_PROPS } from "@/lib/secret-input";
 import type { Provider, TargetLang, TranslateSettings } from "@/lib/types";
 
 interface ProviderSettingsProps {
@@ -59,13 +60,14 @@ export function ProviderSettings({ settings, disabled, onChange }: ProviderSetti
         <div className="mt-4 grid gap-3 sm:grid-cols-3">
           <label className="block text-sm text-neutral-600 dark:text-neutral-300">
             API Key（只存在你的瀏覽器）
+            {/* 金鑰不是登入密碼:用文字欄位 + 遮罩,瀏覽器才不會把存的登入密碼填進來 */}
             <input
-              type="password"
+              {...SECRET_INPUT_PROPS}
               value={settings.apiKey}
               disabled={disabled}
               placeholder="sk-..."
               onChange={(e) => update({ apiKey: e.target.value })}
-              className={`${inputClass} mt-1`}
+              className={`${inputClass} ${SECRET_INPUT_CLASS} mt-1`}
             />
           </label>
           <label className="block text-sm text-neutral-600 dark:text-neutral-300">
